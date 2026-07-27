@@ -1,75 +1,67 @@
-import { Upload, Brain, Truck, HeartHandshake } from "lucide-react";
-
 function HowItWorks() {
   const steps = [
     {
-      icon: <Upload size={40} className="text-emerald-600" />,
+      number: "01",
       title: "Upload Food",
       description:
-        "Restaurants upload surplus food with quantity, expiry time and location."
+        "Restaurants upload surplus food along with quantity and pickup location.",
     },
     {
-      icon: <Brain size={40} className="text-emerald-600" />,
-      title: "AI Smart Match",
+      number: "02",
+      title: "AI Matches NGOs",
       description:
-        "Our AI finds the nearest NGO that can collect the food before it expires."
+        "Our AI finds the nearest NGO that can collect the food before it expires.",
     },
     {
-      icon: <Truck size={40} className="text-emerald-600" />,
+      number: "03",
       title: "Volunteer Pickup",
       description:
-        "Volunteers receive pickup requests with the best route."
+        "A volunteer receives the pickup request and follows the optimized route.",
     },
     {
-      icon: <HeartHandshake size={40} className="text-emerald-600" />,
+      number: "04",
       title: "Meals Delivered",
       description:
-        "Fresh food reaches people instead of ending up as waste."
-    }
+        "Fresh food reaches people in need instead of going to waste.",
+    },
   ];
 
   return (
-    <section className="py-24 bg-white">
-
+    <section className="bg-gray-50 py-20">
       <div className="max-w-7xl mx-auto px-8">
 
-        <h2 className="text-4xl font-bold text-center text-gray-800">
-          How It Works
-        </h2>
+        <div className="text-center">
+          <h2 className="text-4xl font-bold text-gray-900">
+            How It Works
+          </h2>
 
-        <p className="text-center mt-4 text-gray-600">
-          Four simple steps to reduce food waste using AI.
-        </p>
+          <p className="mt-3 text-gray-600">
+            A simple four-step process powered by AI.
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-4 gap-8 mt-16">
-
-          {steps.map((step, index) => (
-
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mt-14">
+          {steps.map((step) => (
             <div
-              key={index}
-              className="rounded-3xl shadow-lg hover:shadow-2xl transition duration-300 p-8 text-center border"
+              key={step.number}
+              className="bg-white rounded-3xl shadow-md hover:shadow-xl transition duration-300 p-8"
             >
-
-              <div className="flex justify-center mb-6">
-                {step.icon}
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xl">
+                {step.number}
               </div>
 
-              <h3 className="text-xl font-semibold">
+              <h3 className="mt-6 text-xl font-bold text-gray-800">
                 {step.title}
               </h3>
 
-              <p className="text-gray-600 mt-4">
+              <p className="mt-4 text-gray-600 leading-7">
                 {step.description}
               </p>
-
             </div>
-
           ))}
-
         </div>
 
       </div>
-
     </section>
   );
 }
