@@ -6,7 +6,8 @@ import Features from "../components/Features";
 import Mission from "../components/Mission";
 import CTA from "../components/CTA";
 import Footer from "../components/Footer";
-
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 function Home() {
   return (
@@ -21,7 +22,21 @@ function Home() {
       <Footer />
       
     </>
+    
   );
+  const location = useLocation();
+
+useEffect(() => {
+  if (location.state?.scrollTo) {
+    const section = document.getElementById(location.state.scrollTo);
+
+    if (section) {
+      section.scrollIntoView({
+        behavior: "smooth",
+      });
+    }
+  }
+}, [location]);
 }
 
 export default Home;

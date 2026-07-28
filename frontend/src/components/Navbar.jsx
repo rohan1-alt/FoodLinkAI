@@ -21,21 +21,22 @@ function Navbar() {
           </div>
         </Link>
 
-        {/* Navigation Links */}
-        <ul className="hidden md:flex items-center gap-8 font-medium text-gray-700">
+        {/* Navigation */}
+        <ul className="flex items-center gap-8 font-medium text-gray-700">
+
           <li>
-            <Link
-              to="/"
-              className="hover:text-emerald-600 transition duration-300"
+            <a
+              href="/"
+              className="hover:text-emerald-600 transition"
             >
               Home
-            </Link>
+            </a>
           </li>
 
           <li>
             <a
               href="#how-it-works"
-              className="hover:text-emerald-600 transition duration-300"
+              className="hover:text-emerald-600 transition"
             >
               How It Works
             </a>
@@ -44,7 +45,7 @@ function Navbar() {
           <li>
             <a
               href="#features"
-              className="hover:text-emerald-600 transition duration-300"
+              className="hover:text-emerald-600 transition"
             >
               Features
             </a>
@@ -53,29 +54,31 @@ function Navbar() {
           <li>
             <a
               href="#contact"
-              className="hover:text-emerald-600 transition duration-300"
+              className="hover:text-emerald-600 transition"
             >
               Contact
             </a>
           </li>
+
         </ul>
 
         {/* Buttons */}
         <div className="flex items-center gap-4">
 
           <Link to="/login">
-            <button className="px-5 py-2 rounded-full text-emerald-600 hover:bg-emerald-50 transition duration-300">
+            <button className="px-5 py-2 rounded-full text-emerald-600 hover:bg-emerald-50 transition">
               Login
             </button>
           </Link>
 
           <Link to="/register">
-            <button className="bg-emerald-600 text-white px-6 py-2 rounded-full shadow-md hover:bg-emerald-700 transition duration-300">
+            <button className="bg-emerald-600 text-white px-6 py-2 rounded-full shadow-md hover:bg-emerald-700 transition">
               Register
             </button>
           </Link>
 
         </div>
+
       </div>
     </nav>
   );

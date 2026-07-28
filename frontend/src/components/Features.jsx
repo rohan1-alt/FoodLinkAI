@@ -34,7 +34,10 @@ function Features() {
   ];
 
   return (
-    <section className="py-24 bg-white">
+    <section
+  id="features"
+  className="py-24 bg-white"
+>
       <div className="max-w-7xl mx-auto px-8">
 
         <div className="text-center">
