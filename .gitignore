@@ -1,0 +1,11 @@
+# Python cache & compiled files
+__pycache__/
+*.pyc
+*.py[s]
+*~
+
+# Local environment & secret files
+.env
+
+# Local SQLite databases (if any were created)
+*.db
