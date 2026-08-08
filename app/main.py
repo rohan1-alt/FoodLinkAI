@@ -5,6 +5,7 @@ from app.routers import donations
 from contextlib import asynccontextmanager
 from app.routers import donations, auth
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create tables automatically on startup
@@ -13,17 +14,18 @@ async def lifespan(app: FastAPI):
     yield
     await engine.dispose()
 
+
 app = FastAPI(
     title="FoodLink AI",
     description="Real-time AI-powered food rescue platform",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # ---------------------------------
 # CORS CONFIGURATION (Phase 4)
 # ---------------------------------
-# For a hackathon, we use ["*"] to allow any frontend to connect. 
+# For a hackathon, we use ["*"] to allow any frontend to connect.
 # In production, you would replace "*" with their actual Vercel/Netlify URL.
 app.add_middleware(
     CORSMiddleware,
@@ -36,6 +38,7 @@ app.add_middleware(
 # Register your endpoints
 app.include_router(donations.router)
 app.include_router(auth.router)
+
 
 @app.get("/")
 async def root():

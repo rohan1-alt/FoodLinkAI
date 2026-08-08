@@ -16,12 +16,11 @@ if not DATABASE_URL:
 engine = create_async_engine(DATABASE_URL, echo=True)
 
 async_session_factory = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False
+    bind=engine, class_=AsyncSession, expire_on_commit=False
 )
 
 Base = declarative_base()
+
 
 async def get_db_session() -> AsyncSession:
     async with async_session_factory() as session:
