@@ -11,11 +11,14 @@ import uuid
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db_session)):
     query = select(User).where(User.email == user_data.email)
     result = await db.execute(query)
-    
+
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -23,36 +26,41 @@ async def signup(user_data: UserCreate, db: AsyncSession = Depends(get_db_sessio
         id=str(uuid.uuid4()),
         full_name=user_data.full_name,
         email=user_data.email,
-        password_hash=get_password_hash(user_data.password), # NOW IT IS HASHED!
+        password_hash=get_password_hash(user_data.password),  # NOW IT IS HASHED!
         role=user_data.role,
-        phone_number=user_data.phone_number
+        phone_number=user_data.phone_number,
     )
-    
+
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
     return new_user
 
+
 @router.post("/login")
-async def login(credentials: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db_session)):
+async def login(
+    credentials: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db_session),
+):
     # Notice we are checking credentials.username here, because that is what the form sends!
     query = select(User).where(User.email == credentials.username)
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    
+
     # Check if user exists AND password matches the hash
     if not user or not verify_password(credentials.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-        
+
     # Generate the JWT Token!
     access_token = create_access_token(data={"sub": user.id, "role": user.role})
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
-        "role": user.role
+        "role": user.role,
     }
+
 
 @router.get("/me", response_model=UserResponse)
 async def read_users_me(current_user: User = Depends(get_current_user)):
