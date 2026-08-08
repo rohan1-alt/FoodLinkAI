@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from sqlalchemy import Column, String, Boolean, Float, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app.database import Base
 
 # Helper function to generate UUID strings for SQLite compatibility
@@ -22,7 +23,9 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # --- Relationships ---
     donations = relationship("FoodDonation", back_populates="donor")
+    claims = relationship("Claim", back_populates="claimed_by_user")
 
 class FoodDonation(Base):
     __tablename__ = 'food_donations'
@@ -42,16 +45,23 @@ class FoodDonation(Base):
     pickup_lng = Column(Float, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # --- Relationships ---
     donor = relationship("User", back_populates="donations")
-    claims = relationship("Claim", back_populates="donation")
+    # cascade="all, delete-orphan" ensures if a donation is deleted, its claims are wiped too!
+    claims = relationship("Claim", back_populates="donation", cascade="all, delete-orphan") 
 
 class Claim(Base):
     __tablename__ = 'claims'
 
     id = Column(String, primary_key=True, default=generate_uuid)
     donation_id = Column(String, ForeignKey('food_donations.id', ondelete='CASCADE'), nullable=False)
-    ngo_id = Column(String, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    
+    # CRITICAL FIX: Renamed from ngo_id to perfectly match the router logic
+    claimed_by_user_id = Column(String, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    
     status = Column(String(20), default='pending')
     claimed_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
+    # --- Relationships ---
     donation = relationship("FoodDonation", back_populates="claims")
+    claimed_by_user = relationship("User", back_populates="claims")

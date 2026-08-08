@@ -30,3 +30,36 @@ class FoodDonationResponse(BaseModel):
     status: str
     
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------
+# USER AUTHENTICATION SCHEMAS
+# ---------------------------------
+class UserCreate(BaseModel):
+    full_name: str
+    email: str
+    password: str
+    role: str  # e.g., 'donor', 'ngo', 'volunteer'
+    phone_number: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    full_name: str
+    email: str
+    role: str
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class ClaimResponse(BaseModel):
+    id: str
+    donation_id: str
+    claimed_by_user_id: str
+    status: str
+    claimed_at: datetime
+
+    class Config:
+        from_attributes = True
