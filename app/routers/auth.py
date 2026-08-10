@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db_session
 from app.models import User
-from app.schemas import UserCreate, UserLogin, UserResponse
+from app.schemas import UserCreate, UserLogin, UserResponse, LocationUpdate
 from app.security import get_password_hash, verify_password, create_access_token
 from app.dependencies import get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
@@ -67,4 +67,26 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     """
     Fetches the currently logged-in user's profile using their JWT token.
     """
+    return current_user
+
+
+@router.patch("/me/location", response_model=UserResponse)
+async def update_my_location(
+    location: LocationUpdate,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Updates the logged-in user's current lat/lng. Donors set this once
+    (their restaurant/venue address); NGOs/volunteers should refresh it
+    from the device GPS periodically -- this is what powers Smart Matching
+    and Volunteer Routing (both need a real coordinate to work with).
+    """
+    current_user.latitude = location.latitude
+    current_user.longitude = location.longitude
+
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(current_user)
+
     return current_user

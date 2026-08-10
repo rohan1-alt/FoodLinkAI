@@ -61,6 +61,11 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class LocationUpdate(BaseModel):
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+
+
 class ClaimResponse(BaseModel):
     id: str
     donation_id: str
@@ -70,3 +75,49 @@ class ClaimResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------------------------------
+# AI SCHEMAS: Smart Matching, Routing, Impact, Gamification
+# ---------------------------------
+class MatchCandidateResponse(BaseModel):
+    user_id: str
+    full_name: str
+    role: str
+    distance_km: float
+    eta_minutes: float
+    reliability_score: float
+    match_score: float
+
+
+class RouteStopResponse(BaseModel):
+    donation_id: str
+    title: str
+    lat: float
+    lng: float
+    leg_distance_km: float
+    leg_eta_minutes: float
+
+
+class RouteResponse(BaseModel):
+    stops: list[RouteStopResponse]
+    total_distance_km: float
+    total_eta_minutes: float
+
+
+class ImpactResponse(BaseModel):
+    total_donations_completed: int
+    total_kg_saved: float
+    meals_saved: int
+    co2_kg_avoided: float
+    active_donors: int
+    active_recipients: int
+
+
+class LeaderboardEntryResponse(BaseModel):
+    user_id: str
+    full_name: str
+    role: str
+    points: int
+    badge: str
+    completed_pickups: int
