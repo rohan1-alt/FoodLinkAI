@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routers import donations
 from contextlib import asynccontextmanager
-from app.routers import donations, auth
+from app.routers import donations, auth, ai
 
 
 @asynccontextmanager
@@ -38,6 +38,7 @@ app.add_middleware(
 # Register your endpoints
 app.include_router(donations.router)
 app.include_router(auth.router)
+app.include_router(ai.router)
 
 
 @app.get("/")

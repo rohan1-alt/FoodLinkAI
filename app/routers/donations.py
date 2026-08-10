@@ -14,6 +14,7 @@ from app.models import User, FoodDonation, Claim
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from ai.inference import predict_urgency
+from ai.gamification import points_for_pickup
 
 router = APIRouter(prefix="/api/v1/donations", tags=["Donations"])
 
@@ -123,6 +124,56 @@ async def claim_donation(
     await db.refresh(donation)
 
     return donation
+
+
+@router.patch("/{donation_id}/complete", response_model=ClaimResponse)
+async def complete_pickup(
+    donation_id: str,
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    QR-code check-in step: the volunteer/NGO that claimed this donation
+    confirms it was actually picked up. This is what unlocks gamification
+    points (Feature #5) and counts toward the public impact dashboard
+    (Feature #4) -- a 'claim' alone doesn't count as food saved yet.
+    """
+    query = select(Claim).where(
+        Claim.donation_id == donation_id,
+        Claim.claimed_by_user_id == current_user.id,
+    )
+    result = await db.execute(query)
+    claim = result.scalar_one_or_none()
+
+    if not claim:
+        raise HTTPException(
+            status_code=404, detail="No claim found for this donation by this user."
+        )
+
+    if claim.status == "completed":
+        raise HTTPException(status_code=400, detail="This pickup is already verified.")
+
+    donation_query = select(FoodDonation).where(FoodDonation.id == donation_id)
+    donation_result = await db.execute(donation_query)
+    donation = donation_result.scalar_one_or_none()
+
+    if not donation:
+        raise HTTPException(status_code=404, detail="Donation not found")
+
+    # 1. Mark the claim + donation as completed
+    claim.status = "completed"
+    donation.status = "completed"
+
+    # 2. Award gamification points based on quantity rescued + urgency
+    earned = points_for_pickup(
+        quantity_kg=donation.quantity, urgency_score=donation.urgency_score
+    )
+    current_user.points = (current_user.points or 0) + earned
+
+    await db.commit()
+    await db.refresh(claim)
+
+    return claim
 
 
 @router.get("/my-claims", response_model=List[ClaimResponse])

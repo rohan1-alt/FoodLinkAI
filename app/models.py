@@ -23,6 +23,8 @@ class User(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     is_verified = Column(Boolean, default=False)
+    # Gamification (Feature #5): running score used for badges/leaderboard
+    points = Column(Integer, default=0, nullable=False)
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
