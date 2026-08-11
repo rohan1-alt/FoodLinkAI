@@ -1,14 +1,24 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from typing import List
 import uuid
+import secrets
+import string
 
 import sys
 import os
 
 from app.database import get_db_session
-from app.schemas import FoodDonationCreate, FoodDonationResponse, ClaimResponse
+from app.schemas import (
+    FoodDonationCreate,
+    FoodDonationResponse,
+    FoodDonationOwnerResponse,
+    ClaimResponse,
+    ClaimWithDonationResponse,
+    CompletePickupRequest,
+)
 from app.dependencies import get_current_user
 from app.models import User, FoodDonation, Claim
 
@@ -19,7 +29,14 @@ from ai.gamification import points_for_pickup
 router = APIRouter(prefix="/api/v1/donations", tags=["Donations"])
 
 
-@router.post("/", response_model=FoodDonationResponse)
+def _generate_pickup_code() -> str:
+    """Short, human-typeable code (e.g. 'K7QX2P') encoded into the QR
+    the donor displays at pickup."""
+    alphabet = string.ascii_uppercase + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(6))
+
+
+@router.post("/", response_model=FoodDonationOwnerResponse)
 async def create_donation(
     donation: FoodDonationCreate,
     db: AsyncSession = Depends(get_db_session),
@@ -50,12 +67,18 @@ async def create_donation(
 
     # 3. Save to the Database using the REAL logged-in user ID
     new_donation = FoodDonation(
-        **donation.model_dump(), urgency_score=urgency, donor_id=current_user.id
+        **donation.model_dump(),
+        urgency_score=urgency,
+        donor_id=current_user.id,
+        pickup_code=_generate_pickup_code(),
     )
 
     db.add(new_donation)
     await db.commit()
     await db.refresh(new_donation)
+
+    # Avoid a second DB round-trip: we already know the donor (it's the caller)
+    new_donation.donor = current_user
 
     return new_donation
 
@@ -67,6 +90,7 @@ async def get_available_donations(db: AsyncSession = Depends(get_db_session)):
     """
     query = (
         select(FoodDonation)
+        .options(selectinload(FoodDonation.donor))
         .where(FoodDonation.status == "available")
         .order_by(FoodDonation.urgency_score.desc())  # Highest urgency at the top
     )
@@ -75,6 +99,27 @@ async def get_available_donations(db: AsyncSession = Depends(get_db_session)):
     donations = result.scalars().all()
 
     return donations
+
+
+@router.get("/my-donations", response_model=List[FoodDonationOwnerResponse])
+async def get_my_donations(
+    db: AsyncSession = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Fetch every donation posted by the currently logged-in donor, including
+    the secret pickup_code so they can re-display the QR code at any time
+    (e.g. after a page refresh).
+    """
+    query = (
+        select(FoodDonation)
+        .options(selectinload(FoodDonation.donor))
+        .where(FoodDonation.donor_id == current_user.id)
+        .order_by(FoodDonation.created_at.desc())
+    )
+
+    result = await db.execute(query)
+    return result.scalars().all()
 
 
 @router.patch("/{donation_id}/claim", response_model=FoodDonationResponse)
@@ -88,7 +133,11 @@ async def claim_donation(
     and record the transaction permanently in the claims table.
     """
     # 1. Find the specific donation by its ID
-    query = select(FoodDonation).where(FoodDonation.id == donation_id)
+    query = (
+        select(FoodDonation)
+        .options(selectinload(FoodDonation.donor))
+        .where(FoodDonation.id == donation_id)
+    )
     result = await db.execute(query)
     donation = result.scalar_one_or_none()
 
@@ -129,12 +178,14 @@ async def claim_donation(
 @router.patch("/{donation_id}/complete", response_model=ClaimResponse)
 async def complete_pickup(
     donation_id: str,
+    body: CompletePickupRequest,
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ):
     """
     QR-code check-in step: the volunteer/NGO that claimed this donation
-    confirms it was actually picked up. This is what unlocks gamification
+    scans (or types) the pickup_code shown on the donor's QR code to
+    confirm they were physically there. This is what unlocks gamification
     points (Feature #5) and counts toward the public impact dashboard
     (Feature #4) -- a 'claim' alone doesn't count as food saved yet.
     """
@@ -160,6 +211,12 @@ async def complete_pickup(
     if not donation:
         raise HTTPException(status_code=404, detail="Donation not found")
 
+    if (donation.pickup_code or "").strip().upper() != body.pickup_code.strip().upper():
+        raise HTTPException(
+            status_code=400,
+            detail="Pickup code doesn't match. Scan/enter the code shown by the donor.",
+        )
+
     # 1. Mark the claim + donation as completed
     claim.status = "completed"
     donation.status = "completed"
@@ -176,18 +233,42 @@ async def complete_pickup(
     return claim
 
 
-@router.get("/my-claims", response_model=List[ClaimResponse])
+@router.get("/my-claims", response_model=List[ClaimWithDonationResponse])
 async def get_my_claims(
     db: AsyncSession = Depends(get_db_session),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Fetch all claims made by the currently logged-in NGO or volunteer.
+    Fetch all claims made by the currently logged-in NGO or volunteer,
+    with just enough donation context (title, status, quantity, pickup
+    coords) that the dashboard doesn't need a second round-trip per claim.
     """
-    # Query the claims table specifically for this user's ID
-    query = select(Claim).where(Claim.claimed_by_user_id == current_user.id)
+    query = (
+        select(Claim)
+        .options(selectinload(Claim.donation))
+        .where(Claim.claimed_by_user_id == current_user.id)
+        .order_by(Claim.claimed_at.desc())
+    )
 
     result = await db.execute(query)
     claims = result.scalars().all()
 
-    return claims
+    enriched = []
+    for c in claims:
+        enriched.append(
+            ClaimWithDonationResponse(
+                id=c.id,
+                donation_id=c.donation_id,
+                claimed_by_user_id=c.claimed_by_user_id,
+                status=c.status,
+                claimed_at=c.claimed_at,
+                donation_title=c.donation.title if c.donation else None,
+                donation_status=c.donation.status if c.donation else None,
+                donation_quantity=c.donation.quantity if c.donation else None,
+                donation_unit=c.donation.unit if c.donation else None,
+                pickup_lat=c.donation.pickup_lat if c.donation else None,
+                pickup_lng=c.donation.pickup_lng if c.donation else None,
+            )
+        )
+
+    return enriched

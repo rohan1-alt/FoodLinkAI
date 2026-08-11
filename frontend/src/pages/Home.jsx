@@ -10,6 +10,20 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 function Home() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.scrollTo) {
+      const section = document.getElementById(location.state.scrollTo);
+
+      if (section) {
+        section.scrollIntoView({
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [location]);
+
   return (
     <>
       <Navbar />
@@ -20,23 +34,8 @@ function Home() {
       <Mission />
       <CTA />
       <Footer />
-      
     </>
-    
   );
-  const location = useLocation();
-
-useEffect(() => {
-  if (location.state?.scrollTo) {
-    const section = document.getElementById(location.state.scrollTo);
-
-    if (section) {
-      section.scrollIntoView({
-        behavior: "smooth",
-      });
-    }
-  }
-}, [location]);
 }
 
 export default Home;
