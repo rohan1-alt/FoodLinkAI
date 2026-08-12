@@ -1,34 +1,50 @@
+# app/database.py
 import os
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
 from dotenv import load_dotenv
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 
-# Load the variables from the .env file
+# Automatically load variables from your .env file
 load_dotenv()
 
-# Fetch the Neon URL
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL is missing from the .env file!")
+# SQLAlchemy's async engine requires the specific 'postgresql+asyncpg://' prefix.
+# This safely converts standard Neon URLs to the correct format so it doesn't crash.
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+asyncpg://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# Create the async engine connected to Neon
-engine = create_async_engine(DATABASE_URL, echo=True)
-
-async_session_factory = async_sessionmaker(
-    bind=engine, class_=AsyncSession, expire_on_commit=False
+# 1. Create the Async Engine
+# pool_pre_ping=True acts as a heartbeat check to prevent the "connection is closed" error!
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_pre_ping=True, 
+    echo=False # Set to True if you want to see all SQL commands printed in your terminal
 )
 
+# 2. Create the Session Factory
+SessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+# 3. Create the Base class for your models to inherit from (User, FoodDonation, etc.)
 Base = declarative_base()
 
-
-async def get_db_session() -> AsyncSession:
-    async with async_session_factory() as session:
+# 4. Create the FastAPI Dependency
+async def get_db_session():
+    """
+    Yields an active database session for a single API request, 
+    then safely closes it when the request finishes.
+    """
+    async with SessionLocal() as session:
         try:
             yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
         finally:
             await session.close()
