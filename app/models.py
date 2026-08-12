@@ -23,6 +23,8 @@ class User(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     is_verified = Column(Boolean, default=False)
+    # Gamification (Feature #5): running score used for badges/leaderboard
+    points = Column(Integer, default=0, nullable=False)
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -50,6 +52,10 @@ class FoodDonation(Base):
     status = Column(String(20), default="available")
     pickup_lat = Column(Float, nullable=False)
     pickup_lng = Column(Float, nullable=False)
+    # Short human-typeable code encoded into the donor's QR code. The
+    # picker scans/enters it on-site to prove they were physically
+    # there before /complete will mark the pickup as verified.
+    pickup_code = Column(String(10), nullable=True)
     created_at = Column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
@@ -60,6 +66,19 @@ class FoodDonation(Base):
     claims = relationship(
         "Claim", back_populates="donation", cascade="all, delete-orphan"
     )
+
+    @property
+    def donor_name(self):
+        """
+        Safe to read ONLY when `donor` was eager-loaded (selectinload) by
+        the query that fetched this row -- otherwise accessing it under
+        an async session raises MissingGreenlet. Every router that
+        serializes donor_name must eager-load the relationship.
+        """
+        try:
+            return self.donor.full_name if self.donor else None
+        except Exception:
+            return None
 
 
 class Claim(Base):
