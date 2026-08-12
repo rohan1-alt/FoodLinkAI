@@ -21,6 +21,7 @@ from app.schemas import (
 )
 from app.dependencies import get_current_user
 from app.models import User, FoodDonation, Claim
+from app.notifications import send_alert  # 🚨 Added Telegram alert import
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from ai.inference import predict_urgency
@@ -171,6 +172,14 @@ async def claim_donation(
     # 5. Commit changes to the Neon database
     await db.commit()
     await db.refresh(donation)
+
+    # 🚨 6. Trigger Telegram Alert! 🚨
+    alert_text = (
+        f"📦 *FoodLinkAI Alert:*\n"
+        f"Donation #{donation.id} has been claimed!\n"
+        f"Status: Ready for pickup and transit."
+    )
+    send_alert(message=alert_text)
 
     return donation
 
