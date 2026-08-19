@@ -25,14 +25,21 @@ app = FastAPI(
 # ---------------------------------
 # CORS CONFIGURATION (Phase 4)
 # ---------------------------------
-# For a hackathon, we use ["*"] to allow any frontend to connect.
-# In production, you would replace "*" with their actual Vercel/Netlify URL.
+# NOTE: allow_origins=["*"] is NOT allowed together with
+# allow_credentials=True per the CORS spec — browsers will block it.
+# So we list actual allowed origins explicitly instead.
+ALLOWED_ORIGINS = [
+    "https://food-link-ai-ten.vercel.app",
+    "https://food-link-ai-git-main-ro-ro5.vercel.app",
+    "https://food-link-pa71ygc8r-ro-ro5.vercel.app",
+    "http://localhost:5173",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods (GET, POST, PUT, DELETE)
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Register your endpoints
