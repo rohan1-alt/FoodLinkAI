@@ -1,6 +1,13 @@
 # FoodLinkAI 🍽️ 
 Smart Food Waste Exchange Platform 
 
+## 🌐 Live Demo
+- **Web App:** [https://food-link-ai-ten.vercel.app](https://food-link-ai-ten.vercel.app)
+- **Backend API Docs (Swagger):** [https://foodlinkai-afyz.onrender.com/docs](https://foodlinkai-afyz.onrender.com/docs)
+- **Backend Base URL:** `https://foodlinkai-afyz.onrender.com`
+
+> ⚠️ The backend runs on Render's free tier, which spins down after periods of inactivity. If the app feels slow or unresponsive on first load, give it 30-50 seconds to wake up, then retry.
+
 ## 📌 Problem Statement 
 Every day, restaurants, bakeries, hostels, supermarkets, and event venues throw away large amounts of perfectly edible food. 
 
@@ -97,3 +104,8 @@ When a new donation is posted, the `predict_urgency()` inference model automatic
 3. `npm run dev`
 
 The frontend has three role-based dashboards (`/dashboard/restaurant`, `/dashboard/ngo`, `/dashboard/volunteer`) plus a public `/impact` page. Register an account to pick a role and get routed automatically.
+
+### ☁️ Deployment
+- **Backend:** deployed on [Render](https://render.com) as a Python web service (`uvicorn app.main:app --host 0.0.0.0 --port $PORT`), connected to a [Neon](https://neon.tech) PostgreSQL database via `DATABASE_URL`.
+- **Frontend:** deployed on [Vercel](https://vercel.com), root directory `frontend`, with `VITE_API_URL` set to the Render backend URL (including the `/api/v1` prefix).
+- CORS on the backend is restricted to the deployed frontend's origin(s) — see `ALLOWED_ORIGINS` in `app/main.py`.
