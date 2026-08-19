@@ -1,9 +1,12 @@
+
+import os
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 import jwt
 
 # Secret key to sign the JWT tokens (Keep this safe!)
-SECRET_KEY = "super_secret_hackathon_key_change_me_later"
+# Set SECRET_KEY as an environment variable in production (Render dashboard).
+SECRET_KEY = os.getenv("SECRET_KEY", "super_secret_hackathon_key_change_me_later")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
