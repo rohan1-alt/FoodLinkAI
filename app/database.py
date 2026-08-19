@@ -18,20 +18,23 @@ if DATABASE_URL:
     elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+asyncpg://"):
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-# asyncpg (used by the async engine) does NOT understand the "sslmode" query
-# param that psycopg2/Neon connection strings normally include. If we leave
-# it in the URL, asyncpg raises: TypeError: connect() got an unexpected
-# keyword argument 'sslmode'. So we strip it out of the URL here and instead
-# tell asyncpg to use SSL via connect_args below.
+# asyncpg (used by the async engine) does NOT understand several query
+# params that libpq/psycopg2-style connection strings use, such as
+# "sslmode" and "channel_binding" (Neon adds both by default). Leaving
+# them in the URL causes: TypeError: connect() got an unexpected keyword
+# argument 'sslmode' (or 'channel_binding'). So we strip ALL query params
+# out of the URL here and instead tell asyncpg to use SSL via connect_args.
+UNSUPPORTED_ASYNCPG_PARAMS = {"sslmode", "channel_binding"}
+
 connect_args = {}
 if DATABASE_URL:
     parts = urlsplit(DATABASE_URL)
     query_pairs = parse_qsl(parts.query, keep_blank_values=True)
-    filtered_pairs = [(k, v) for k, v in query_pairs if k.lower() != "sslmode"]
-    had_sslmode = len(filtered_pairs) != len(query_pairs)
+    filtered_pairs = [(k, v) for k, v in query_pairs if k.lower() not in UNSUPPORTED_ASYNCPG_PARAMS]
+    had_ssl_param = len(filtered_pairs) != len(query_pairs)
     new_query = urlencode(filtered_pairs)
     DATABASE_URL = urlunsplit((parts.scheme, parts.netloc, parts.path, new_query, parts.fragment))
-    if had_sslmode:
+    if had_ssl_param:
         connect_args["ssl"] = True
 
 # 1. Create the Async Engine
